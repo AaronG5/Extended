@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'extended_app',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -49,7 +51,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'extended.urls'
+ROOT_URLCONF = 'extended_api.urls'
 
 TEMPLATES = [
     {
@@ -66,7 +68,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'extended.wsgi.application'
+WSGI_APPLICATION = 'extended_api.wsgi.application'
 
 
 # Database

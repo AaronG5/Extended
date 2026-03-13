@@ -45,14 +45,13 @@ class Outlet(models.Model):
 class PowerReading(models.Model):
     outlet = models.ForeignKey(Outlet, on_delete=models.CASCADE, related_name='readings')
     amperage = models.FloatField()
-    volts = models.FloatField()
-    watts = models.FloatField()
+    voltage = models.FloatField()
+    wattage = models.FloatField()
     timestamp_ms = models.BigIntegerField()       # ms from ESP32 boot
-    
     recorded_at = models.DateTimeField(auto_now_add=True)  # when server received it
 
     class Meta:
         ordering = ['timestamp_ms']
 
     def __str__(self):
-        return f"{self.outlet} - {self.watts}W / {self.volts}V at {self.timestamp_ms}ms"
+        return f"{self.outlet} - {self.wattage}W / {self.voltage}V at {self.timestamp_ms}ms"

@@ -1,0 +1,13 @@
+services:
+  django:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./extended:/app # live code reloading during development
+      - sqlite_data:/app/db # persist the database between restarts
+    env_file:
+      - .env
+
+volumes:
+  sqlite_data:

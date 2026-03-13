@@ -16,13 +16,11 @@ class ReceiveReadingsView(APIView):
       data = serializer.validated_data
       recorded_at = timezone.now()  # capture once for the whole batch
 
-      try:
-         esp32 = ESP32.objects.get(esp32_id=data['esp32_id'])
-      except ESP32.DoesNotExist:
-         return Response(
-            {'error': 'ESP32 not registered'},
-            status=status.HTTP_404_NOT_FOUND
-         )
+
+      esp32, created = ESP32.objects.get_or_create(esp32_id=data['esp32_id'])
+      if created:
+         for i in range(4):
+            Outlet.objects.create(esp32=esp32, outlet_index=i)
 
       # The last reading's timestamp_ms is the anchor for projecting all timestamps
       anchor_timestamp_ms = data['readings'][-1]['timestamp_ms']
@@ -34,7 +32,7 @@ class ReceiveReadingsView(APIView):
             r = PowerReading(
                outlet=outlet,
                amperage=reading['amperage'],
-               volts=reading['volts'],
+               voltage=reading['voltage'],
                timestamp_ms=reading['timestamp_ms'],
                button_state=reading['button_state']
             )
@@ -47,5 +45,7 @@ class ReceiveReadingsView(APIView):
             continue
 
       return Response(
+         {'message': f'{saved_readings} readings saved'},
          status=status.HTTP_201_CREATED
       )
+   

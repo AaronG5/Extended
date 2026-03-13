@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import ESP32, Outlet, PowerReading
 
 class PowerReadingInputSerializer(serializers.Serializer):
-   outlet_index = serializers.IntegerField(min_value=0, max_value=0)
+   outlet_index = serializers.IntegerField()
    amperage = serializers.FloatField()
    voltage = serializers.FloatField()
    # wattage = serializers.FloatField() # Should calculate in views

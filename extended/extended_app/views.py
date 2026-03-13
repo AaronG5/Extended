@@ -11,7 +11,7 @@ class ReceiveReadingsView(APIView):
       serializer = ESP32PayloadSerializer(data=request.data)
 
       if not serializer.is_valid():
-         return Response(status=status.HTTP_400_BAD_REQUEST)
+         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
       data = serializer.validated_data
       recorded_at = timezone.now()  # capture once for the whole batch
@@ -20,6 +20,7 @@ class ReceiveReadingsView(APIView):
          esp32 = ESP32.objects.get(esp32_id=data['esp32_id'])
       except ESP32.DoesNotExist:
          return Response(
+            {'error': 'ESP32 not registered'},
             status=status.HTTP_404_NOT_FOUND
          )
 

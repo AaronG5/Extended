@@ -50,7 +50,7 @@ class PowerReading(models.Model):
     voltage = models.FloatField()
     wattage = models.FloatField()
     timestamp_ms = models.BigIntegerField()       # ms from ESP32 boot
-    button_state = models.BooleanField()            # True if button pressed, else False
+    button_state = models.BooleanField(default=False)            # True if button pressed, else False
     
     recorded_at = models.DateTimeField(auto_now_add=True)  # when server received it
     projected_timestamp = models.DateTimeField(null=True, blank=True)  # when it likely occurred

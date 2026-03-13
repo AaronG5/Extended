@@ -1,0 +1,11 @@
+services:
+  django:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./extended:/app # live code reloading during development
+    env_file:
+      - .env
+
+volumes: {}

@@ -24,24 +24,21 @@ class Outlet(models.Model):
         return f"{self.esp32} - Outlet {self.outlet_index}"
 
 
-# class Device(models.Model):
-#     DEVICE_TYPES = [
-#         ('television', 'Television'),
-#         ('fridge', 'Fridge'),
-#         ('washing_machine', 'Washing Machine'),
-#         ('dishwasher', 'Dishwasher'),
-#         ('microwave', 'Microwave'),
-#         ('computer', 'Computer'),
-#         ('other', 'Other'),
-#     ]
+class Device(models.Model):
+   DEVICE_TYPES = [
+      'compact_flourescent_lamp', 'air_conditioner', 'hairdryer', 
+      'laptop', 'vacuum', 'fridge', 'washing_machine',
+      'incandescent_light_bulb', 'microwave', 'fan', 'heater',
+      'coffee_maker', 'water_kettle', 'hair_iron', 'soldering_iron', 
+      'blender'
+   ]
 
-#     outlet = models.OneToOneField(Outlet, on_delete=models.CASCADE, related_name='device')
-#     name = models.CharField(max_length=100)         # e.g. "Samsung TV"
-#     device_type = models.CharField(max_length=50, choices=DEVICE_TYPES)
-#     created_at = models.DateTimeField(auto_now_add=True)
+   outlet = models.OneToOneField(Outlet, on_delete=models.CASCADE, related_name='device_type')
+   device_type = models.CharField(max_length=50, choices=DEVICE_TYPES)
+   updated_at = models.DateTimeField(auto_now=True)
 
-#     def __str__(self):
-#         return f"{self.name} ({self.device_type})"
+   def __str__(self):
+      return f"{self.outlet} -> {self.device_type}"
 
 
 class PowerReading(models.Model):

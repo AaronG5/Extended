@@ -25,13 +25,14 @@ class Outlet(models.Model):
 
 
 class Device(models.Model):
-   DEVICE_TYPES = [
+   DEVICE_TYPES_LIST = [
       'compact_flourescent_lamp', 'air_conditioner', 'hairdryer', 
       'laptop', 'vacuum', 'fridge', 'washing_machine',
       'incandescent_light_bulb', 'microwave', 'fan', 'heater',
       'coffee_maker', 'water_kettle', 'hair_iron', 'soldering_iron', 
       'blender'
    ]
+   DEVICE_TYPES = [(t, t.replace('_', ' ').title()) for t in DEVICE_TYPES_LIST]
 
    outlet = models.OneToOneField(Outlet, on_delete=models.CASCADE, related_name='device_type')
    device_type = models.CharField(max_length=50, choices=DEVICE_TYPES)

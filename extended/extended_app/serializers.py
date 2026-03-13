@@ -7,6 +7,7 @@ class PowerReadingInputSerializer(serializers.Serializer):
    voltage = serializers.FloatField()
    # wattage = serializers.FloatField() # Should calculate in views
    timestamp_ms = serializers.IntegerField()
+   button_state = serializers.BooleanField()
 
 class ESP32PayloadSerializer(serializers.Serializer):
    esp32_id = serializers.CharField()

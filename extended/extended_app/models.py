@@ -1,4 +1,6 @@
+from datetime import timedelta
 from django.db import models
+from django.utils import timezone
 
 class ESP32(models.Model):
     esp32_id = models.CharField(max_length=100, unique=True)
@@ -48,10 +50,50 @@ class PowerReading(models.Model):
     voltage = models.FloatField()
     wattage = models.FloatField()
     timestamp_ms = models.BigIntegerField()       # ms from ESP32 boot
+    button_state = models.BooleanField()            # True if button pressed, else False
+    
     recorded_at = models.DateTimeField(auto_now_add=True)  # when server received it
+    projected_timestamp = models.DateTimeField(null=True, blank=True)  # when it likely occurred
 
     class Meta:
-        ordering = ['timestamp_ms']
+        ordering = ['projected_timestamp']
+
+    @staticmethod
+    def calculate_projected_timestamp(recorded_at, anchor_timestamp_ms, timestamp_ms, rtt_ms=0):
+        if recorded_at is None:
+            raise ValueError('recorded_at is required to calculate projected_timestamp')
+
+        one_way_delay_ms = rtt_ms / 2
+        age_delta_ms = anchor_timestamp_ms - timestamp_ms
+
+        return recorded_at - timedelta(milliseconds=one_way_delay_ms + age_delta_ms)
+
+    def set_projected_timestamp(self, anchor_timestamp_ms, recorded_at=None, rtt_ms=0):
+        effective_recorded_at = recorded_at or self.recorded_at or timezone.now()
+        self.projected_timestamp = self.calculate_projected_timestamp(
+            recorded_at=effective_recorded_at,
+            anchor_timestamp_ms=anchor_timestamp_ms,
+            timestamp_ms=self.timestamp_ms,
+            rtt_ms=rtt_ms,
+        )
+        return self.projected_timestamp
+
+    def save(self, *args, **kwargs):
+        anchor_timestamp_ms = kwargs.pop('anchor_timestamp_ms', None)
+        recorded_at = kwargs.pop('recorded_at', None)
+        rtt_ms = kwargs.pop('rtt_ms', 0)
+
+        # Keep wattage consistent with the incoming electrical values.
+        self.wattage = self.voltage * self.amperage
+
+        if anchor_timestamp_ms is not None:
+            self.set_projected_timestamp(
+                anchor_timestamp_ms=anchor_timestamp_ms,
+                recorded_at=recorded_at,
+                rtt_ms=rtt_ms,
+            )
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.outlet} - {self.wattage}W / {self.voltage}V at {self.timestamp_ms}ms"

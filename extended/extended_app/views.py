@@ -304,13 +304,13 @@ class ESP32DashboardView(APIView):
          )
 
          # Run periodic checks across the last 1 minutes of readings
-         anomalies = run_periodic_checks(outlet, readings)
-         for anomaly in anomalies:
-            all_anomalies.append({
-               'outlet': outlet.outlet_index,
-               'timestamp': now.isoformat(),
-               **anomaly
-            })
+         # anomalies = run_periodic_checks(outlet, readings)
+         # for anomaly in anomalies:
+         #    all_anomalies.append({
+         #       'outlet': outlet.outlet_index,
+         #       'timestamp': now.isoformat(),
+         #       **anomaly
+         #    })
 
          readings_desc = list(
             outlet.readings.order_by('-projected_timestamp', '-recorded_at')[:400]

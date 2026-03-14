@@ -11,6 +11,7 @@ from .anomaly_detection import run_per_reading_checks, run_periodic_checks
 
 class ReceiveReadingsView(APIView):
    def post(self, request):
+      print(request.data)
       serializer = ESP32PayloadSerializer(data=request.data)
 
       if not serializer.is_valid():

@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+* {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+
+  color-scheme: light;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+li {
+  list-style: none;
+}
+
+@theme {
+    --color-extended-black: rgb(23, 46, 98);
+    --color-extended-white: rgb(255, 255, 255);
+}
+
+@utility preserve-3d {
+    transform-style: preserve-3d;
+}
+
+@utility backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}

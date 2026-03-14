@@ -27,8 +27,8 @@ class ReceiveReadingsView(APIView):
       saved_readings = 0
       all_anomalies = []
 
+      anchor_timestamp_ms = reading['timestamp_ms']
       for reading in data['readings']:
-         anchor_timestamp_ms = reading['timestamp_ms']
          voltage = normalize_voltage(reading['voltage'])
          min_voltage = normalize_voltage(reading['min_voltage'])
          max_voltage = normalize_voltage(reading['max_voltage'])

@@ -11,7 +11,7 @@ WATTAGE_FLUCTUATION_STDEV_PCT = 10
 STANDBY_POWER_THRESHOLD_W = 2       # watts above which button-off is suspicious
 
 EXPECTED_WATTAGE = {
-    'compact_flourescent_lamp':  (2.5, 15),
+    'compact_flourescent_lamp':  (0.1, 1),
     'air_conditioner':           (250, 1750),
     'hairdryer':                 (500, 1250),
     'laptop':                    (10, 75),
@@ -68,7 +68,7 @@ def check_wattage_spike(readings_qs):
 
 def check_voltage_fluctuation(outlet):
    """Check stdev across last 15 minutes of batches."""
-   since = timezone.now() - timedelta(minutes=15)
+   since = timezone.now() - timedelta(minutes=1)
    voltages = list(
       PowerReading.objects.filter(outlet=outlet, projected_timestamp__gte=since)
       .values_list('voltage', flat=True)
@@ -94,7 +94,7 @@ def check_voltage_fluctuation(outlet):
 
 def check_wattage_fluctuation(outlet):
    """Check stdev across last 15 minutes of batches."""
-   since = timezone.now() - timedelta(minutes=15)
+   since = timezone.now() - timedelta(minutes=1)
    wattages = list(
       PowerReading.objects.filter(outlet=outlet, projected_timestamp__gte=since)
       .values_list('wattage', flat=True)
@@ -124,7 +124,7 @@ def check_abnormal_consumption(outlet):
    except Exception:
       return None
 
-   since = timezone.now() - timedelta(minutes=15)
+   since = timezone.now() - timedelta(minutes=1)
    wattages = list(
       PowerReading.objects.filter(outlet=outlet, projected_timestamp__gte=since)
       .values_list('wattage', flat=True)

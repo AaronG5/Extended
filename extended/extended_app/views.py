@@ -299,12 +299,12 @@ class ESP32DashboardView(APIView):
       outlet_data = []
 
       for outlet in outlets:
-         readings_15m = outlet.readings.filter(
-            projected_timestamp__gte=now - timedelta(minutes=15)
+         readings = outlet.readings.filter(
+            projected_timestamp__gte=now - timedelta(minutes=1)
          )
 
-         # Run periodic checks across the last 15 minutes of readings
-         anomalies = run_periodic_checks(outlet, readings_15m)
+         # Run periodic checks across the last 1 minutes of readings
+         anomalies = run_periodic_checks(outlet, readings)
          for anomaly in anomalies:
             all_anomalies.append({
                'outlet': outlet.outlet_index,

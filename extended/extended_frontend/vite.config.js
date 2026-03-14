@@ -7,4 +7,12 @@ export default defineConfig({
   plugins: [react(),
         tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://stavaris.com',
+        changeOrigin: true,
+      },
+    },
+  },
 })

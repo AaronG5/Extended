@@ -21,8 +21,8 @@ function ExtenderSection({ espId, devices }) {
     const device = devices.find(d => d.slot === slotNum);
     return {
       slotNumber: slotNum,
-      state: device?.pluggedIn ? (device.hasAlert ? 'alert' : 'active') : 'empty',
-      deviceName: device?.pluggedIn ? device.name : null,
+      state: device?.buttonState ? (device.hasAlert ? 'alert' : 'active') : 'empty',
+      deviceName: device?.buttonState ? device.name : null,
     };
   });
 

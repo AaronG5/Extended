@@ -19,7 +19,7 @@ function Field({ label, name, type = 'text', value, onChange, placeholder }) {
 }
 
 function ProfilePage() {
-  const [form, setForm] = useState({ email: '', name: '', location: '' });
+  const [form, setForm] = useState({ email: 'jusu@pastas.lt', name: 'Jonas Jonaitis', location: 'Vilnius, Lietuva' });
   const [saved, setSaved] = useState(false);
 
   const handleChange = e => {

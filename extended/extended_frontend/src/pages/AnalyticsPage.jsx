@@ -3,9 +3,9 @@ import {
   PieChart, Pie, Cell, Tooltip as PieTooltip,
   LineChart, Line, XAxis, YAxis, Tooltip as LineTooltip, ResponsiveContainer,
 } from 'recharts';
-import { fetchAllEnergyByDevice } from '../data/api';
+import { fetchAllEnergyByDevice, fetchAlerts } from '../data/api';
 import {
-  fetchEnergyPrices, fetchStandbyPower, fetchAlerts,
+  fetchEnergyPrices, fetchStandbyPower,
 } from '../data/testData';
 
 const PIE_COLORS = ['#172e62', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#e0f2fe'];
@@ -141,7 +141,7 @@ function AnalyticsPage() {
         {/* Card 3 — Standby */}
         <Card title="Išjungų prietaisų sąnaudos">
           <div className="flex flex-col items-center justify-center h-40 gap-2">
-            <span className="text-5xl font-bold text-extended-black">{standby}</span>
+            <span className="text-5xl font-bold text-extended-black">{Number(standby).toFixed(1)}</span>
             <span className="text-gray-500 text-sm">Vatai budėjimo režimu</span>
             <div className="flex gap-6 mt-2 text-center">
               <div>

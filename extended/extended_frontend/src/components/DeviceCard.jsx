@@ -91,7 +91,7 @@ function DeviceCard({ device, fetchHistory }) {
     });
   }, [isFlipped, granularity, device.id, fetchHistory]);
 
-  const pluggedIn = device.pluggedIn;
+  const active = device.buttonState;
 
   return (
     <div style={{ perspective: '1000px' }} className="w-full h-72">
@@ -109,13 +109,13 @@ function DeviceCard({ device, fetchHistory }) {
         <div
           style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
           className={`absolute inset-0 rounded-2xl p-5 flex flex-col shadow-md border-2 bg-white ${
-            pluggedIn ? 'border-extended-black' : 'border-gray-200 opacity-75'
+            active ? 'border-extended-black' : 'border-gray-200 opacity-75'
           }`}
         >
           {/* Connected indicator */}
           <div className="flex items-center gap-2 mb-3">
-            <span className={`inline-block w-2.5 h-2.5 rounded-full ${pluggedIn ? 'bg-green-400' : 'bg-gray-300'}`} />
-            <span className="text-xs text-gray-400">{pluggedIn ? 'Connected' : 'Disconnected'}</span>
+            <span className={`inline-block w-2.5 h-2.5 rounded-full ${active ? 'bg-green-400' : 'bg-gray-300'}`} />
+            <span className="text-xs text-gray-400">{active ? 'Connected' : 'Disconnected'}</span>
           </div>
 
           {/* Device name — editable. Button is absolute so it never shifts the text's center. */}
@@ -169,7 +169,7 @@ function DeviceCard({ device, fetchHistory }) {
             {/* Row 1, Col 1 — watts */}
             <div className="flex flex-col items-center justify-center">
               <span className="text-2xl font-bold text-extended-black leading-none">
-                {pluggedIn ? device.currentPowerDraw : '—'}
+                {active ? Number(device.currentPowerDraw).toFixed(1) : '—'}
               </span>
               <span className="text-xs text-gray-400 mt-1">Watts</span>
             </div>
@@ -177,7 +177,7 @@ function DeviceCard({ device, fetchHistory }) {
             {/* Row 1, Col 2 — kWh */}
             <div className="flex flex-col items-center justify-center">
               <span className="text-2xl font-bold text-extended-black leading-none">
-                {pluggedIn ? kwh : '—'}
+                {active ? kwh : '—'}
               </span>
               <span className="text-xs text-gray-400 mt-1">{kwhLabel}</span>
             </div>
@@ -221,7 +221,7 @@ function DeviceCard({ device, fetchHistory }) {
             transform: 'rotateY(180deg)',
           }}
           className={`absolute inset-0 rounded-2xl p-5 flex flex-col shadow-md border-2 bg-white ${
-            pluggedIn ? 'border-extended-black' : 'border-gray-200 opacity-75'
+            active ? 'border-extended-black' : 'border-gray-200 opacity-75'
           }`}
         >
           <div className="flex items-center justify-between mb-2">

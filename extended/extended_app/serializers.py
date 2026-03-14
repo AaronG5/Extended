@@ -37,6 +37,12 @@ class WattageReadingSerializer(serializers.Serializer):
    timestamp = serializers.DateTimeField()
    wattage = serializers.FloatField()
 
+
+class EnergyBreakdownSerializer(serializers.Serializer):
+   device_type = serializers.CharField(allow_null=True)
+   kwh = serializers.FloatField()
+   percentage = serializers.FloatField()
+
 # JSON EXAMPLE:
 # {
 #    "id": "ABC123",

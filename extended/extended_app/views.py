@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import ESP32, Outlet, Device, PowerReading
-from .serializers import ESP32PayloadSerializer, ESP32DashboardSerializer, WattageReadingSerializer
+from .serializers import ESP32PayloadSerializer, ESP32DashboardSerializer, WattageReadingSerializer, EnergyBreakdownSerializer
 from .utils import normalize_current, normalize_voltage
 
 
@@ -54,6 +54,58 @@ class ReceiveReadingsView(APIView):
          {'message': f'{saved_readings} readings saved'},
          status=status.HTTP_201_CREATED
       )
+
+class EnergyBreakdownView(APIView):
+   PERIODS = {'day': 24, 'week': 168, 'month': 720}
+
+   def get(self, request, esp32_id):
+      period = request.query_params.get('period', 'day')
+      if period not in self.PERIODS:
+         return Response(
+            {'error': f'period must be one of: {list(self.PERIODS)}'},
+            status=status.HTTP_400_BAD_REQUEST
+         )
+
+      try:
+         esp32 = ESP32.objects.get(esp32_id=esp32_id)
+      except ESP32.DoesNotExist:
+         return Response({'error': 'ESP32 not found'}, status=status.HTTP_404_NOT_FOUND)
+
+      since = timezone.now() - timedelta(hours=self.PERIODS[period])
+      breakdown = []
+
+      for outlet in Outlet.objects.filter(esp32=esp32).order_by('outlet_index'):
+         readings = outlet.readings.filter(recorded_at__gte=since).order_by('recorded_at')
+         count = readings.count()
+         if count < 2:
+            continue
+
+         first = readings.first()
+         last = readings.last()
+         t_start = first.projected_timestamp or first.recorded_at
+         t_end = last.projected_timestamp or last.recorded_at
+         total_hours = (t_end - t_start).total_seconds() / 3600
+         if total_hours <= 0:
+            continue
+
+         avg_wattage = sum(r.wattage for r in readings) / count
+         kwh = round(avg_wattage * total_hours / 1000, 6)
+
+         try:
+            device_type = outlet.device_type.device_type
+         except Device.DoesNotExist:
+            device_type = None
+
+         breakdown.append({'device_type': device_type, 'kwh': kwh})
+
+      total_kwh = sum(e['kwh'] for e in breakdown)
+      for entry in breakdown:
+         entry['percentage'] = round(entry['kwh'] / total_kwh * 100, 1) if total_kwh > 0 else 0.0
+
+      serializer = EnergyBreakdownSerializer(data=breakdown, many=True)
+      serializer.is_valid(raise_exception=True)
+      return Response(serializer.data)
+
 
 class OutletReadingsView(APIView):
    PERIODS = {'hour': 1, 'day': 24, 'week': 168}

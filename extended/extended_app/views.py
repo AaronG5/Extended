@@ -201,10 +201,17 @@ class ClassifyLatestDeviceView(APIView):
 
 class ListESP32View(APIView):
    def get(self, request):
+      limit_raw = request.query_params.get('limit', '10')
+      try:
+         limit = max(1, min(int(limit_raw), 1000))
+      except ValueError:
+         return Response({'error': 'limit must be an integer'}, status=status.HTTP_400_BAD_REQUEST)
+
+      # Lightweight DB query: distinct IDs only, capped result size.
       devices = list(
-         ESP32.objects.order_by('esp32_id').values_list('esp32_id', flat=True)
+         ESP32.objects.values_list('esp32_id', flat=True).distinct()[:limit]
       )
-      return Response({'devices': devices}, status=status.HTTP_200_OK)
+      return Response({'devices': devices, 'returned': len(devices)}, status=status.HTTP_200_OK)
 
 class ESP32DashboardView(APIView):
    def get(self, request, esp32_id):

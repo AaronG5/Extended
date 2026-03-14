@@ -9,6 +9,7 @@ from .utils import normalize_current, normalize_voltage
 
 class ReceiveReadingsView(APIView):
    def post(self, request):
+      print(request.data)
       serializer = ESP32PayloadSerializer(data=request.data)
 
       if not serializer.is_valid():
@@ -23,8 +24,9 @@ class ReceiveReadingsView(APIView):
             Outlet.objects.create(esp32=esp32, outlet_index=i)
 
       saved_readings = 0
+      # anchor_timestamp_ms = reading['timestamp_ms']
+      anchor_timestamp_ms = max(r["timestamp_ms"] for r in data["readings"])
       for reading in data['readings']:
-         anchor_timestamp_ms = reading['timestamp_ms']
          voltage = reading['voltage']
 
          for outlet_index in range(4):

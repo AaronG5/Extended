@@ -18,6 +18,20 @@ class ESP32PayloadSerializer(serializers.Serializer):
    id = serializers.CharField()
    readings = ReadingInputSerializer(many=True)
 
+
+class OutletDashboardSerializer(serializers.Serializer):
+   outlet_index = serializers.IntegerField()
+   device_type = serializers.CharField(allow_null=True)
+   # Latest reading values
+   button_state = serializers.BooleanField(allow_null=True)
+   wattage = serializers.FloatField(allow_null=True)
+   kwh_recorded = serializers.FloatField()
+
+
+class ESP32DashboardSerializer(serializers.Serializer):
+   esp32_id = serializers.CharField()
+   outlets = OutletDashboardSerializer(many=True)
+
 # JSON EXAMPLE:
 # {
 #    "id": "ABC123",

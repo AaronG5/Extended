@@ -2,8 +2,8 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import ESP32, Outlet, PowerReading
-from .serializers import ESP32PayloadSerializer
+from .models import ESP32, Outlet, Device, PowerReading
+from .serializers import ESP32PayloadSerializer, ESP32DashboardSerializer
 from .utils import normalize_current, normalize_voltage
 
 
@@ -53,6 +53,13 @@ class ReceiveReadingsView(APIView):
          {'message': f'{saved_readings} readings saved'},
          status=status.HTTP_201_CREATED
       )
+
+class ListESP32View(APIView):
+   def get(self, request):
+      esp32s = ESP32.objects.values_list('esp32_id', flat=True)
+      return Response({'devices': list(esp32s)})
+
+
 class ESP32DashboardView(APIView):
    def get(self, request, esp32_id):
       try:
@@ -62,6 +69,37 @@ class ESP32DashboardView(APIView):
             {'error': 'ESP32 not found'},
             status=status.HTTP_404_NOT_FOUND
          )
-      
-      outlets = Outlet.objects.filter(esp32=esp32).prefetch_related('readings')
-      # TODO: add serialization and change the data that is supposed to be sent
+
+      outlets_data = []
+      for outlet in Outlet.objects.filter(esp32=esp32).order_by('outlet_index'):
+         readings = outlet.readings.order_by('recorded_at')
+         reading_count = readings.count()
+
+         latest = readings.last()
+
+         kwh_recorded = 0.0
+         if reading_count > 1 and latest:
+            first = readings.first()
+            t_start = first.projected_timestamp or first.recorded_at
+            t_end = latest.projected_timestamp or latest.recorded_at
+            total_hours = (t_end - t_start).total_seconds() / 3600
+            if total_hours > 0:
+               avg_wattage = sum(r.wattage for r in readings) / reading_count
+               kwh_recorded = round(avg_wattage * total_hours / 1000, 6)
+
+         try:
+            device_type = outlet.device_type.device_type
+         except Device.DoesNotExist:
+            device_type = None
+
+         outlets_data.append({
+            'outlet_index': outlet.outlet_index,
+            'device_type': device_type,
+            'button_state': latest.button_state if latest else None,
+            'wattage': latest.wattage if latest else None,
+            'kwh_recorded': kwh_recorded,
+         })
+
+      serializer = ESP32DashboardSerializer(data={'esp32_id': esp32_id, 'outlets': outlets_data})
+      serializer.is_valid(raise_exception=True)
+      return Response(serializer.data)

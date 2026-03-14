@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import ESP32, Outlet, PowerReading
 from .serializers import ESP32PayloadSerializer
+from .utils import normalize_current, normalize_voltage
 
 
 class ReceiveReadingsView(APIView):
@@ -27,14 +28,14 @@ class ReceiveReadingsView(APIView):
          voltage = reading['voltage']
 
          for outlet_index in range(4):
-            current = reading[f'current_{outlet_index + 1}']
+            raw_current = reading[f'current_{outlet_index + 1}']
             button_state = reading[f'button_{outlet_index + 1}']
             try:
                outlet = Outlet.objects.get(esp32=esp32, outlet_index=outlet_index)
                r = PowerReading(
                   outlet=outlet,
-                  amperage=current,
-                  voltage=voltage,
+                  amperage=normalize_current(raw_current),
+                  voltage=normalize_voltage(reading['voltage']),
                   timestamp_ms=reading['timestamp_ms'],
                   button_state=button_state,
                )

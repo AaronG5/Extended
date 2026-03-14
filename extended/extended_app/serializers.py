@@ -2,12 +2,12 @@ from rest_framework import serializers
 from .models import ESP32, Outlet, PowerReading
 
 class ReadingInputSerializer(serializers.Serializer):
-   voltage = serializers.FloatField()
+   voltage = serializers.IntegerField(min_value=0, max_value=4096)
    timestamp_ms = serializers.IntegerField()
-   current_1 = serializers.FloatField()
-   current_2 = serializers.FloatField()
-   current_3 = serializers.FloatField()
-   current_4 = serializers.FloatField()
+   current_1 = serializers.IntegerField(min_value=0, max_value=4096)
+   current_2 = serializers.IntegerField(min_value=0, max_value=4096)
+   current_3 = serializers.IntegerField(min_value=0, max_value=4096)
+   current_4 = serializers.IntegerField(min_value=0, max_value=4096)
    button_1 = serializers.BooleanField()
    button_2 = serializers.BooleanField()
    button_3 = serializers.BooleanField()

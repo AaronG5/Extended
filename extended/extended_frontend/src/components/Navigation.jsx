@@ -2,9 +2,9 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 
 const NAV_ITEMS = [
-  { label: 'Devices',   to: '/devices'   },
-  { label: 'Analytics', to: '/analytics' },
-  { label: 'Profile',   to: '/profile'   },
+  { label: 'Įrenginiai',   to: '/devices'   },
+  { label: 'Suvestinė', to: '/analytics' },
+  { label: 'Profilis',   to: '/profile'   },
 ];
 
 function Navigation() {
@@ -16,13 +16,13 @@ function Navigation() {
       </div>
 
       {/* Nav links */}
-      <ul className="flex gap-1 font-medium">
+      <ul className="flex gap-1">
         {NAV_ITEMS.map(({ label, to }) => (
           <li key={to}>
             <NavLink
               to={to}
               className={({ isActive }) =>
-                `px-5 py-2 rounded-lg text-base transition-colors ${
+                `px-5 py-2 rounded-lg text-base font-medium transition-colors ${
                   isActive
                     ? 'bg-extended-black text-white'
                     : 'text-extended-black hover:bg-gray-100'

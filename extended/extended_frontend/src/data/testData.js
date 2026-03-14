@@ -5,7 +5,7 @@ const _devices = [
   { id: 2, name: 'Monitor',      slot: 2, pluggedIn: true,  hasAlert: false, alertMessage: null,                          currentPowerDraw: 38  },
   { id: 3, name: 'Space Heater', slot: 3, pluggedIn: true,  hasAlert: true,  alertMessage: 'High consumption detected',   currentPowerDraw: 1800 },
   { id: 4, name: 'Lamp',         slot: null, pluggedIn: false, hasAlert: false, alertMessage: null,                       currentPowerDraw: 0   },
-  { id: 5, name: 'Old Printer',  slot: null, pluggedIn: false, hasAlert: false, alertMessage: null,                       currentPowerDraw: 0   },
+  { id: 5, name: 'Old Printe1r',  slot: null, pluggedIn: false, hasAlert: false, alertMessage: null,                       currentPowerDraw: 0   },
   { id: 6, name: 'Coffee Maker', slot: null, pluggedIn: false, hasAlert: false, alertMessage: null,                       currentPowerDraw: 0   },
 ];
 

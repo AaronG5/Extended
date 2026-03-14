@@ -7,11 +7,11 @@ class ESP32(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"ESP32 {self.esp32_id}"
+        return f'SP32 {self.esp32_id}'
 
 
 class Outlet(models.Model):
-    OUTLET_CHOICES = [(i, f"Outlet {i}") for i in range(4)]  # 0, 1, 2, 3
+    OUTLET_CHOICES = [(i, f'Outlet {i}') for i in range(4)]  # 0, 1, 2, 3
 
     esp32 = models.ForeignKey(ESP32, on_delete=models.CASCADE, related_name='outlets')
     outlet_index = models.IntegerField(choices=OUTLET_CHOICES)  # which of the 4 outlets
@@ -21,7 +21,7 @@ class Outlet(models.Model):
         unique_together = ('esp32', 'outlet_index')  # no duplicate outlet 0 on same ESP32
 
     def __str__(self):
-        return f"{self.esp32} - Outlet {self.outlet_index}"
+        return f'{self.esp32} - Outlet {self.outlet_index}'
 
 
 class Device(models.Model):

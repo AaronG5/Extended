@@ -8,9 +8,52 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import ESP32, Outlet, PowerReading
-from .serializers import ESP32PayloadSerializer, ClassifierInputSerializer
+from .serializers import (
+   ESP32PayloadSerializer,
+   ClassifierInputSerializer,
+   ClassifierLatestRequestSerializer,
+)
 from .utils import normalize_voltage, normalize_current
 from .anomaly_detection import run_per_reading_checks, run_periodic_checks
+
+
+def call_classifier(payload):
+   classifier_url = os.getenv('CLASSIFIER_URL', 'http://classifier:8000').rstrip('/')
+   validation_url = f'{classifier_url}/validation'
+   req = urllib_request.Request(
+      validation_url,
+      data=json.dumps(payload).encode('utf-8'),
+      headers={'Content-Type': 'application/json'},
+      method='POST',
+   )
+
+   try:
+      with urllib_request.urlopen(req, timeout=12) as resp:
+         body = json.loads(resp.read().decode('utf-8'))
+   except error.HTTPError as exc:
+      error_body = exc.read().decode('utf-8')
+      return None, Response(
+         {'error': 'Classifier rejected request', 'details': error_body},
+         status=status.HTTP_502_BAD_GATEWAY,
+      )
+   except error.URLError as exc:
+      return None, Response(
+         {'error': 'Classifier unavailable', 'details': str(exc.reason)},
+         status=status.HTTP_503_SERVICE_UNAVAILABLE,
+      )
+   except (ValueError, json.JSONDecodeError):
+      return None, Response(
+         {'error': 'Invalid classifier response'},
+         status=status.HTTP_502_BAD_GATEWAY,
+      )
+
+   if 'label' not in body or 'confidence' not in body:
+      return None, Response(
+         {'error': 'Classifier response missing fields'},
+         status=status.HTTP_502_BAD_GATEWAY,
+      )
+
+   return body, None
 
 
 class ReceiveReadingsView(APIView):
@@ -84,8 +127,6 @@ class ClassifyDeviceView(APIView):
          return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
       data = serializer.validated_data
-      classifier_url = os.getenv('CLASSIFIER_URL', 'http://classifier:8000').rstrip('/')
-      validation_url = f'{classifier_url}/validation'
       payload = {
          'voltage': data['voltage'],
          'current': data['current'],
@@ -93,38 +134,9 @@ class ClassifyDeviceView(APIView):
          'target_hz': 250,
       }
 
-      req = urllib_request.Request(
-         validation_url,
-         data=json.dumps(payload).encode('utf-8'),
-         headers={'Content-Type': 'application/json'},
-         method='POST',
-      )
-
-      try:
-         with urllib_request.urlopen(req, timeout=12) as resp:
-            body = json.loads(resp.read().decode('utf-8'))
-      except error.HTTPError as exc:
-         error_body = exc.read().decode('utf-8')
-         return Response(
-            {'error': 'Classifier rejected request', 'details': error_body},
-            status=status.HTTP_502_BAD_GATEWAY,
-         )
-      except error.URLError as exc:
-         return Response(
-            {'error': 'Classifier unavailable', 'details': str(exc.reason)},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-         )
-      except (ValueError, json.JSONDecodeError):
-         return Response(
-            {'error': 'Invalid classifier response'},
-            status=status.HTTP_502_BAD_GATEWAY,
-         )
-
-      if 'label' not in body or 'confidence' not in body:
-         return Response(
-            {'error': 'Classifier response missing fields'},
-            status=status.HTTP_502_BAD_GATEWAY,
-         )
+      body, error_response = call_classifier(payload)
+      if error_response is not None:
+         return error_response
 
       return Response(
          {
@@ -133,6 +145,66 @@ class ClassifyDeviceView(APIView):
          },
          status=status.HTTP_200_OK,
       )
+
+
+class ClassifyLatestDeviceView(APIView):
+   def post(self, request):
+      serializer = ClassifierLatestRequestSerializer(data=request.data)
+      if not serializer.is_valid():
+         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+      data = serializer.validated_data
+
+      try:
+         outlet = Outlet.objects.get(
+            esp32__esp32_id=data['esp32_id'],
+            outlet_index=data['outlet_index'],
+         )
+      except Outlet.DoesNotExist:
+         return Response({'error': 'Outlet not found'}, status=status.HTTP_404_NOT_FOUND)
+
+      latest_readings_desc = list(
+         outlet.readings.order_by('-recorded_at')[:500]
+      )
+      if len(latest_readings_desc) < 500:
+         return Response(
+            {
+               'error': f'Need 500 samples, found {len(latest_readings_desc)}',
+               'sample_count': len(latest_readings_desc),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+         )
+
+      latest_readings = list(reversed(latest_readings_desc))
+      payload = {
+         'voltage': [r.voltage for r in latest_readings],
+         'current': [r.amperage for r in latest_readings],
+         'source_hz': data['source_hz'],
+         'target_hz': 250,
+      }
+
+      body, error_response = call_classifier(payload)
+      if error_response is not None:
+         return error_response
+
+      return Response(
+         {
+            'esp32_id': data['esp32_id'],
+            'outlet_index': data['outlet_index'],
+            'sample_count': 500,
+            'device_guess': body['label'],
+            'probability': body['confidence'],
+         },
+         status=status.HTTP_200_OK,
+      )
+
+
+class ListESP32View(APIView):
+   def get(self, request):
+      devices = list(
+         ESP32.objects.order_by('esp32_id').values_list('esp32_id', flat=True)
+      )
+      return Response({'devices': devices}, status=status.HTTP_200_OK)
 
 class ESP32DashboardView(APIView):
    def get(self, request, esp32_id):

@@ -34,6 +34,12 @@ class ClassifierInputSerializer(serializers.Serializer):
    )
    source_hz = serializers.IntegerField(required=False, default=250, min_value=1)
 
+
+class ClassifierLatestRequestSerializer(serializers.Serializer):
+   esp32_id = serializers.CharField()
+   outlet_index = serializers.IntegerField(min_value=0, max_value=3)
+   source_hz = serializers.IntegerField(required=False, default=250, min_value=1)
+
 # JSON EXAMPLE:
    # "Content-Type: application/json" 
    # {

@@ -21,11 +21,11 @@ class ReceiveReadingsView(APIView):
          for i in range(4):
             Outlet.objects.create(esp32=esp32, outlet_index=i)
 
-      anchor_timestamp_ms = data['timestamp_ms']
-      voltage = data['voltage']
-
       saved_readings = 0
       for reading in data['readings']:
+         anchor_timestamp_ms = reading['timestamp_ms']
+         voltage = reading['voltage']
+
          for outlet_index in range(4):
             current = reading[f'current_{outlet_index + 1}']
             button_state = reading[f'button_{outlet_index + 1}']
@@ -35,7 +35,7 @@ class ReceiveReadingsView(APIView):
                   outlet=outlet,
                   amperage=current,
                   voltage=voltage,
-                  timestamp_ms=data['timestamp_ms'],
+                  timestamp_ms=reading['timestamp_ms'],
                   button_state=button_state,
                )
                r.save(

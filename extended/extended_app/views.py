@@ -1,7 +1,6 @@
 import json
 import os
 from urllib import error, request as urllib_request
-from django.db.models import Avg
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework.views import APIView
@@ -301,13 +300,12 @@ class ESP32DashboardView(APIView):
         for outlet in outlets:
             latest = outlet.readings.order_by('-projected_timestamp', '-recorded_at').first()
 
-            last_400 = outlet.readings.order_by('-projected_timestamp', '-recorded_at')[:400]
-            stats = last_400.aggregate(avg_wattage=Avg('wattage'))
-            avg_wattage = stats['avg_wattage'] or 0.0
+            last_400 = list(outlet.readings.order_by('-projected_timestamp', '-recorded_at')[:400])
+            avg_wattage = (sum(abs_wattage(r.voltage, r.amperage) for r in last_400) / len(last_400)) if last_400 else 0.0
 
             kwh_recorded = 0.0
             if latest:
-                oldest_of_400 = last_400.last()
+                oldest_of_400 = last_400[-1] if last_400 else None
                 if oldest_of_400:
                     t_start = oldest_of_400.projected_timestamp or oldest_of_400.recorded_at
                     t_end = latest.projected_timestamp or latest.recorded_at

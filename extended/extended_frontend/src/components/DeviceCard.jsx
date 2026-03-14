@@ -92,6 +92,10 @@ function DeviceCard({ device, fetchHistory }) {
   }, [isFlipped, granularity, device.id, fetchHistory]);
 
   const pluggedIn = device.pluggedIn;
+  const wattageValue = Number(device.currentPowerDraw);
+  const displayWatts = Number.isFinite(wattageValue)
+    ? Math.round(Math.abs(wattageValue))
+    : null;
 
   return (
     <div style={{ perspective: '1000px' }} className="w-full h-72">
@@ -169,7 +173,7 @@ function DeviceCard({ device, fetchHistory }) {
             {/* Row 1, Col 1 — watts */}
             <div className="flex flex-col items-center justify-center">
               <span className="text-2xl font-bold text-extended-black leading-none">
-                {pluggedIn ? device.currentPowerDraw : '—'}
+                {pluggedIn && displayWatts != null ? displayWatts : '—'}
               </span>
               <span className="text-xs text-gray-400 mt-1">Watts</span>
             </div>

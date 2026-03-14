@@ -5,6 +5,7 @@ from .views import (
     ClassifyDeviceView,
     ClassifyLatestDeviceView,
     ESP32DashboardView,
+    ESP32LatestReadingsView
 )
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path('classify/', ClassifyDeviceView.as_view(), name='classify-device'),
     path('classify-latest/', ClassifyLatestDeviceView.as_view(), name='classify-latest-device'),
     path('dashboard/<str:esp32_id>/', ESP32DashboardView.as_view(), name='esp32-dashboard'),
+    path('latest/<str:esp32_id>/', ESP32LatestReadingsView.as_view(), name='esp32-latest'),
 ]

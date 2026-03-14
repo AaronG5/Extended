@@ -239,3 +239,41 @@ class ESP32DashboardView(APIView):
          'timestamp': now.isoformat(),
          'anomalies': all_anomalies,
       }, status=status.HTTP_200_OK)
+   
+
+class ESP32LatestReadingsView(APIView):
+   def get(self, request, esp32_id):
+      try:
+         esp32 = ESP32.objects.get(esp32_id=esp32_id)
+      except ESP32.DoesNotExist:
+         return Response(
+            {'error': 'ESP32 not found'},
+            status=status.HTTP_404_NOT_FOUND
+         )
+
+      outlets = Outlet.objects.filter(esp32=esp32)
+      result = []
+
+      for outlet in outlets:
+         readings = PowerReading.objects.filter(outlet=outlet).order_by('-projected_timestamp')[:400]
+         result.append({
+            'outlet_index': outlet.outlet_index,
+            'readings': [
+               {
+                  'voltage': r.voltage,
+                  'min_voltage': r.min_voltage,
+                  'max_voltage': r.max_voltage,
+                  'amperage': r.amperage,
+                  'wattage': r.wattage,
+                  'button_state': r.button_state,
+                  'timestamp_ms': r.timestamp_ms,
+                  'projected_timestamp': r.projected_timestamp,
+               }
+               for r in readings
+            ]
+         })
+
+      return Response({
+         'esp32_id': esp32_id,
+         'outlets': result,
+      }, status=status.HTTP_200_OK)

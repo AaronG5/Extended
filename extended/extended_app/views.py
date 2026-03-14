@@ -56,6 +56,56 @@ def call_classifier(payload):
    return body, None
 
 
+def normalize_device_label(label):
+   if not label:
+      return None
+
+   normalized = str(label).strip().lower().replace(' ', '_')
+   if normalized in Device.DEVICE_TYPES_LIST:
+      return normalized
+   return None
+
+
+def get_or_predict_device_type(outlet, source_hz=250, max_attempts=10, window_size=500):
+   try:
+      return outlet.device_type.device_type
+   except Device.DoesNotExist:
+      pass
+
+   base_queryset = outlet.readings.order_by('-recorded_at')
+
+   for attempt in range(max_attempts):
+      start = attempt * window_size
+      end = start + window_size
+      readings_desc = list(base_queryset[start:end])
+      if len(readings_desc) < window_size:
+         break
+
+      readings = list(reversed(readings_desc))
+      payload = {
+         'voltage': [r.voltage for r in readings],
+         'current': [r.amperage for r in readings],
+         'source_hz': source_hz,
+         'target_hz': 250,
+      }
+
+      body, error_response = call_classifier(payload)
+      if error_response is not None or body is None:
+         continue
+
+      device_type = normalize_device_label(body.get('label'))
+      if device_type is None:
+         continue
+
+      device, _ = Device.objects.update_or_create(
+         outlet=outlet,
+         defaults={'device_type': device_type},
+      )
+      return device.device_type
+
+   return None
+
+
 class ReceiveReadingsView(APIView):
    def post(self, request):
       # print(request.data)
@@ -259,10 +309,7 @@ class ESP32DashboardView(APIView):
                avg_wattage = sum(abs_wattage(r.voltage, r.amperage) for r in readings) / len(readings)
                kwh_recorded = round(avg_wattage * total_hours / 1000, 6)
 
-         try:
-            device_type = outlet.device_type.device_type
-         except Device.DoesNotExist:
-            device_type = None
+         device_type = get_or_predict_device_type(outlet)
 
          outlet_data.append({
             'outlet_index': outlet.outlet_index,
@@ -311,10 +358,7 @@ class ESP32LatestReadingsView(APIView):
                avg_wattage = sum(abs_wattage(r.voltage, r.amperage) for r in readings) / len(readings)
                kwh_recorded = round(avg_wattage * total_hours / 1000, 6)
 
-         try:
-            device_type = outlet.device_type.device_type
-         except Device.DoesNotExist:
-            device_type = None
+         device_type = get_or_predict_device_type(outlet)
 
          result.append({
             'outlet_index': outlet.outlet_index,
@@ -429,10 +473,7 @@ class EnergyBreakdownView(APIView):
          avg_wattage = sum(abs_wattage(r.voltage, r.amperage) for r in readings) / len(readings)
          kwh = round(avg_wattage * total_hours / 1000, 6)
 
-         try:
-            device_type = outlet.device_type.device_type
-         except Device.DoesNotExist:
-            device_type = None
+         device_type = get_or_predict_device_type(outlet)
 
          entries.append({'device_type': device_type, 'kwh': kwh})
 

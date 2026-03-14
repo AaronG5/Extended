@@ -18,6 +18,20 @@ class ESP32PayloadSerializer(serializers.Serializer):
    id = serializers.CharField()
    readings = ReadingInputSerializer(many=True)
 
+
+class ClassifierInputSerializer(serializers.Serializer):
+   voltage = serializers.ListField(
+      child=serializers.FloatField(),
+      min_length=500,
+      max_length=500,
+   )
+   current = serializers.ListField(
+      child=serializers.FloatField(),
+      min_length=500,
+      max_length=500,
+   )
+   source_hz = serializers.IntegerField(required=False, default=250, min_value=1)
+
 # JSON EXAMPLE:
 # {
 #    "id": "ABC123",

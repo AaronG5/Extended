@@ -19,6 +19,25 @@ services:
     networks:
       - app_network
 
+  classifier:
+    build:
+      context: ./extended/extended_ai_classifier/inference-service
+      dockerfile: Dockerfile
+    expose:
+      - "8000"
+    volumes:
+      - ./extended/extended_ai_classifier/saved_model:/app/saved_model:ro
+    environment:
+      MODEL_PATH: saved_model/model_250hz.json
+      ENCODER_PATH: saved_model/label_encoder.pkl
+      MODEL_FREQ_HZ: "250"
+      MODEL_SOURCE_HZ: "250"
+      MODEL_IMG_SIZE: "32"
+      ALLOWED_ORIGINS: http://stavaris.com,http://www.stavaris.com,http://localhost:3000,https://stavaris.com,https://www.stavaris.com
+    restart: unless-stopped
+    networks:
+      - app_network
+
   nginx:
     image: nginx:alpine
     ports:

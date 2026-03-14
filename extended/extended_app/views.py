@@ -1,9 +1,13 @@
+import json
+import os
+from urllib import error, request as urllib_request
+
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import ESP32, Outlet, PowerReading
-from .serializers import ESP32PayloadSerializer
+from .serializers import ESP32PayloadSerializer, ClassifierInputSerializer
 from .utils import normalize_current, normalize_voltage
 
 
@@ -53,6 +57,66 @@ class ReceiveReadingsView(APIView):
          {'message': f'{saved_readings} readings saved'},
          status=status.HTTP_201_CREATED
       )
+
+
+class ClassifyDeviceView(APIView):
+   def post(self, request):
+      serializer = ClassifierInputSerializer(data=request.data)
+      if not serializer.is_valid():
+         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+      data = serializer.validated_data
+      classifier_url = os.getenv('CLASSIFIER_URL', 'http://classifier:8000').rstrip('/')
+      validation_url = f'{classifier_url}/validation'
+      payload = {
+         'voltage': data['voltage'],
+         'current': data['current'],
+         'source_hz': data['source_hz'],
+         'target_hz': 250,
+      }
+
+      req = urllib_request.Request(
+         validation_url,
+         data=json.dumps(payload).encode('utf-8'),
+         headers={'Content-Type': 'application/json'},
+         method='POST',
+      )
+
+      try:
+         with urllib_request.urlopen(req, timeout=12) as resp:
+            body = json.loads(resp.read().decode('utf-8'))
+      except error.HTTPError as exc:
+         error_body = exc.read().decode('utf-8')
+         return Response(
+            {'error': 'Classifier rejected request', 'details': error_body},
+            status=status.HTTP_502_BAD_GATEWAY,
+         )
+      except error.URLError as exc:
+         return Response(
+            {'error': 'Classifier unavailable', 'details': str(exc.reason)},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+         )
+      except (ValueError, json.JSONDecodeError):
+         return Response(
+            {'error': 'Invalid classifier response'},
+            status=status.HTTP_502_BAD_GATEWAY,
+         )
+
+      if 'label' not in body or 'confidence' not in body:
+         return Response(
+            {'error': 'Classifier response missing fields'},
+            status=status.HTTP_502_BAD_GATEWAY,
+         )
+
+      return Response(
+         {
+            'device_guess': body['label'],
+            'probability': body['confidence'],
+         },
+         status=status.HTTP_200_OK,
+      )
+
+
 class ESP32DashboardView(APIView):
    def get(self, request, esp32_id):
       try:

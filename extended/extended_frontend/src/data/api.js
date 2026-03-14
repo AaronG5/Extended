@@ -1,11 +1,176 @@
-const BASE = 'http://stavaris.com/api';
+const BASE = 'mock://stavaris.com/api';
+let requestCounter = 0;
+
+const MOCK_DEVICE_IDS = ['ESP32-A1', 'ESP32-B2'];
+
+const MOCK_DASHBOARDS = {
+  'ESP32-A1': {
+    esp32_id: 'ESP32-A1',
+    outlets: [
+      { outlet_index: 0, device_type: 'gaming_pc', button_state: true, wattage: 243.4, kwh_recorded: 12.7421 },
+      { outlet_index: 1, device_type: 'monitor', button_state: true, wattage: 38.2, kwh_recorded: 2.1189 },
+      { outlet_index: 2, device_type: 'space_heater', button_state: true, wattage: 1812.7, kwh_recorded: 36.0422 },
+      { outlet_index: 3, device_type: null, button_state: false, wattage: 0, kwh_recorded: 0.0 },
+    ],
+  },
+  'ESP32-B2': {
+    esp32_id: 'ESP32-B2',
+    outlets: [
+      { outlet_index: 0, device_type: 'router', button_state: true, wattage: 12.6, kwh_recorded: 1.4205 },
+      { outlet_index: 1, device_type: 'desk_lamp', button_state: true, wattage: 9.3, kwh_recorded: 0.8099 },
+      { outlet_index: 2, device_type: 'coffee_maker', button_state: false, wattage: 0, kwh_recorded: 4.2291 },
+      { outlet_index: 3, device_type: null, button_state: false, wattage: 0, kwh_recorded: 0.0 },
+    ],
+  },
+};
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function cloneJson(data) {
+  return JSON.parse(JSON.stringify(data));
+}
+
+function pseudoNoise(seed) {
+  return Math.sin(seed * 12.9898) * 43758.5453 % 1;
+}
+
+function generateReadings(espId, outletIndex, period) {
+  const outlet = MOCK_DASHBOARDS[espId]?.outlets?.[outletIndex];
+  const base = outlet?.wattage ?? 0;
+  const now = new Date();
+
+  const stepByPeriod = {
+    hour: { points: 60, minutesStep: 1 },
+    day: { points: 24, minutesStep: 60 },
+    week: { points: 7, minutesStep: 60 * 24 },
+  };
+
+  const cfg = stepByPeriod[period] ?? stepByPeriod.day;
+
+  return Array.from({ length: cfg.points }, (_, idx) => {
+    const reverseIdx = cfg.points - idx - 1;
+    const timestamp = new Date(now.getTime() - reverseIdx * cfg.minutesStep * 60 * 1000).toISOString();
+
+    if (!base) {
+      return { timestamp, wattage: 0 };
+    }
+
+    const wave = Math.sin(idx / 4) * base * 0.14;
+    const jitter = pseudoNoise(idx + outletIndex * 17) * base * 0.06;
+    const wattage = Math.max(0, base + wave + jitter);
+    return { timestamp, wattage: parseFloat(wattage.toFixed(2)) };
+  });
+}
+
+function periodFactor(period) {
+  if (period === 'week') return 7;
+  if (period === 'month') return 30;
+  return 1;
+}
+
+function resolveMockGet(path) {
+  const parsed = new URL(`${BASE}${path}`);
+  const pathname = parsed.pathname;
+
+  if (pathname === '/api/devices/') {
+    return { devices: MOCK_DEVICE_IDS };
+  }
+
+  const dashboardMatch = pathname.match(/^\/api\/dashboard\/([^/]+)\/$/);
+  if (dashboardMatch) {
+    const espId = dashboardMatch[1];
+    const dashboard = MOCK_DASHBOARDS[espId];
+    if (!dashboard) {
+      throw new Error(`API ${path} -> 404`);
+    }
+    return dashboard;
+  }
+
+  const outletReadingsMatch = pathname.match(/^\/api\/outlet\/([^/]+)\/readings\/$/);
+  if (outletReadingsMatch) {
+    const espId = outletReadingsMatch[1];
+    const outletIndex = Number(parsed.searchParams.get('outlet_index') ?? '0');
+    const period = parsed.searchParams.get('period') ?? 'day';
+    return generateReadings(espId, outletIndex, period);
+  }
+
+  const energyMatch = pathname.match(/^\/api\/energy\/([^/]+)\/$/);
+  if (energyMatch) {
+    const espId = energyMatch[1];
+    const period = parsed.searchParams.get('period') ?? 'day';
+    const dashboard = MOCK_DASHBOARDS[espId];
+    if (!dashboard) {
+      throw new Error(`API ${path} -> 404`);
+    }
+
+    const rows = dashboard.outlets
+      .filter(o => o.device_type)
+      .map(o => ({
+        device_type: o.device_type,
+        kwh: parseFloat((o.kwh_recorded * periodFactor(period)).toFixed(4)),
+      }));
+
+    return rows;
+  }
+
+  throw new Error(`API ${path} -> 404`);
+}
 
 // ── Raw fetches ──────────────────────────────────────────────────────────────
 
 async function get(path) {
-  const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
-  return res.json();
+  const requestId = ++requestCounter;
+  const url = `${BASE}${path}`;
+  const startedAt = performance.now();
+
+  console.groupCollapsed(`[API][GET][${requestId}] ${path}`);
+  console.log('Request', {
+    id: requestId,
+    method: 'GET',
+    path,
+    url,
+    startedAtIso: new Date().toISOString(),
+  });
+
+  try {
+    await sleep(120);
+    const data = resolveMockGet(path);
+    const elapsedMs = Math.round(performance.now() - startedAt);
+
+    console.log('Response metadata', {
+      id: requestId,
+      ok: true,
+      status: 200,
+      statusText: 'OK (mock)',
+      elapsedMs,
+      headers: {},
+      source: 'mock-data',
+    });
+
+    console.log('Response payload', {
+      id: requestId,
+      payloadType: Array.isArray(data) ? 'array' : typeof data,
+      itemCount: Array.isArray(data) ? data.length : undefined,
+      payload: data,
+    });
+
+    return cloneJson(data);
+  } catch (error) {
+    const elapsedMs = Math.round(performance.now() - startedAt);
+    console.error('GET exception', {
+      id: requestId,
+      path,
+      url,
+      elapsedMs,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  } finally {
+    console.groupEnd();
+  }
 }
 
 export const getDeviceIds  = ()      => get('/devices/');

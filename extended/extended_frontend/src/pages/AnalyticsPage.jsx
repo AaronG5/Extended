@@ -3,12 +3,13 @@ import {
   PieChart, Pie, Cell, Tooltip as PieTooltip,
   LineChart, Line, XAxis, YAxis, Tooltip as LineTooltip, ResponsiveContainer,
 } from 'recharts';
+import { fetchAllEnergyByDevice } from '../data/api';
 import {
-  fetchDeviceKwh, fetchEnergyPrices, fetchStandbyPower, fetchAlerts,
+  fetchEnergyPrices, fetchStandbyPower, fetchAlerts,
 } from '../data/testData';
 
 const PIE_COLORS = ['#172e62', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#e0f2fe'];
-const PERIODS = ['day', 'week', 'month'];
+const PERIODS = ['diena', 'savaitė', 'mėnesis'];
 const OTHER_THRESHOLD = 0.01; // group slices below 1%
 
 /** Collapse slices that represent < 1% of the total into a single "Other" slice */
@@ -19,7 +20,7 @@ function groupSmallSlices(data) {
   const small = data.filter(d => d.kwh / total <  OTHER_THRESHOLD);
   if (small.length === 0) return big;
   const otherKwh = small.reduce((s, d) => s + d.kwh, 0);
-  return [...big, { id: -1, name: 'Other', kwh: parseFloat(otherKwh.toFixed(2)) }];
+  return [...big, { id: -1, name: 'Kita', kwh: parseFloat(otherKwh.toFixed(2)) }];
 }
 
 function CheckIcon() {
@@ -83,11 +84,11 @@ function AnalyticsPage() {
   }, []);
 
   useEffect(() => {
-    fetchDeviceKwh(kwhPeriod).then(raw => setKwhData(groupSmallSlices(raw)));
+    fetchAllEnergyByDevice(kwhPeriod).then(raw => setKwhData(groupSmallSlices(raw)));
   }, [kwhPeriod]);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400">Loading…</div>;
+    return <div className="flex items-center justify-center h-64 text-gray-400">Kraunama…</div>;
   }
 
   const standbyKwhDay   = (standby * 24 / 1000).toFixed(3);
@@ -95,13 +96,13 @@ function AnalyticsPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      <h2 className="text-extended-black text-xl font-semibold mb-1">Analytics</h2>
-      <p className="text-gray-400 text-sm mb-6">Energy overview and system insights</p>
+      <h2 className="text-extended-black text-xl font-semibold mb-1">Suvestinė</h2>
+      <p className="text-gray-400 text-sm mb-6">Energijos sąnauda ir įspėjimai</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* Card 1 — Energy by device (pie) */}
-        <Card title="Energy by Device">
+        <Card title="Energijos sąnauda pagal įrenginį">
           <PeriodToggle value={kwhPeriod} onChange={setKwhPeriod} />
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
@@ -125,42 +126,42 @@ function AnalyticsPage() {
         </Card>
 
         {/* Card 2 — Energy price */}
-        <Card title="Energy Price">
-          <p className="text-xs text-gray-400 mb-3">€/kWh over last 24 hours</p>
+        <Card title="Elektros kaina">
+          <p className="text-xs text-gray-400 mb-3">€/kWh per paskutines 24 valandas</p>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={prices} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#6b7280' }} interval={7} tickLine={false} />
               <YAxis tick={{ fontSize: 9, fill: '#6b7280' }} width={46} tickLine={false} axisLine={false} tickFormatter={v => `€${v.toFixed(2)}`} />
-              <LineTooltip formatter={v => [`€${Number(v).toFixed(4)}/kWh`, 'Price']} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+              <LineTooltip formatter={v => [`€${Number(v).toFixed(4)}/kWh`, 'Kaina']} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
               <Line type="monotone" dataKey="price" stroke="#172e62" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
 
         {/* Card 3 — Standby */}
-        <Card title="Standby Consumption">
+        <Card title="Išjungų prietaisų sąnaudos">
           <div className="flex flex-col items-center justify-center h-40 gap-2">
             <span className="text-5xl font-bold text-extended-black">{standby}</span>
-            <span className="text-gray-500 text-sm">Watts idle</span>
+            <span className="text-gray-500 text-sm">Vatai budėjimo režimu</span>
             <div className="flex gap-6 mt-2 text-center">
               <div>
                 <p className="text-lg font-semibold text-extended-black">{standbyKwhDay}</p>
-                <p className="text-xs text-gray-400">kWh / day</p>
+                <p className="text-xs text-gray-400">kWh / parą</p>
               </div>
               <div>
                 <p className="text-lg font-semibold text-extended-black">{standbyKwhMonth}</p>
-                <p className="text-xs text-gray-400">kWh / month</p>
+                <p className="text-xs text-gray-400">kWh / mėnesį</p>
               </div>
             </div>
           </div>
         </Card>
 
         {/* Card 4 — Alerts */}
-        <Card title="Alerts">
+        <Card title="Įspėjimai">
           {alerts.length === 0 ? (
             <div className="flex items-center gap-2 text-green-600 text-sm">
               <CheckIcon />
-              <span>No active alerts</span>
+              <span>Įspėjimų nėra</span>
             </div>
           ) : (
             <ul className="space-y-3 overflow-y-auto max-h-52">

@@ -35,31 +35,31 @@ function ProfilePage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-12">
-      <h1 className="text-2xl font-bold text-extended-black mb-2">Profile</h1>
-      <p className="text-gray-400 text-sm mb-8">Manage your account details</p>
+      <h1 className="text-2xl font-bold text-extended-black mb-2">Profilis</h1>
+      <p className="text-gray-400 text-sm mb-8">Tvarkykite savo paskyros informaciją</p>
 
       <form onSubmit={handleSave} className="space-y-5">
         <Field
-          label="Email"
+          label="El. paštas"
           name="email"
           type="email"
           value={form.email}
           onChange={handleChange}
-          placeholder="you@example.com"
+          placeholder="jusu@pastas.lt"
         />
         <Field
-          label="Full Name"
+          label="Vardas ir pavardė"
           name="name"
           value={form.name}
           onChange={handleChange}
-          placeholder="Jane Smith"
+          placeholder="Jonas Jonaitis"
         />
         <Field
-          label="Location / City"
+          label="Miestas / Vietovė"
           name="location"
           value={form.location}
           onChange={handleChange}
-          placeholder="Vilnius, Lithuania"
+          placeholder="Vilnius, Lietuva"
         />
 
         <button
@@ -67,11 +67,11 @@ function ProfilePage() {
           className="w-full bg-extended-black text-white py-2.5 rounded-xl font-medium
                      hover:opacity-90 transition-opacity"
         >
-          Save Changes
+          Išsaugoti pakeitimus
         </button>
 
         {saved && (
-          <p className="text-center text-green-500 text-sm">Changes saved ✓</p>
+          <p className="text-center text-green-500 text-sm">Pakeitimai išsaugoti ✓</p>
         )}
 
         <div className="relative my-2">
@@ -79,17 +79,17 @@ function ProfilePage() {
             <div className="w-full border-t border-gray-200" />
           </div>
           <div className="relative flex justify-center">
-            <span className="bg-white px-3 text-xs text-gray-400">Security</span>
+            <span className="bg-white px-3 text-xs text-gray-400">Saugumas</span>
           </div>
         </div>
 
         <button
           type="button"
-          onClick={() => alert('Password reset email sent (mock)')}
+          onClick={() => alert('Slaptažodžio keitimo laiškas išsiųstas (demo)')}
           className="w-full border-2 border-extended-black text-extended-black py-2.5 rounded-xl
                      font-medium hover:bg-extended-black hover:text-white transition-colors"
         >
-          Reset Password
+          Keisti slaptažodį
         </button>
       </form>
     </div>

@@ -30,7 +30,7 @@ class ReceiveReadingsView(APIView):
 
       min_voltage = normalize_voltage(data['min_voltage'])
       max_voltage = normalize_voltage(data['max_voltage'])
-      anchor_timestamp_ms = reading['timestamp_ms']
+      anchor_timestamp_ms = data['readings'][-1]['timestamp_ms']
       for reading in data['readings']:
          voltage = normalize_voltage(reading['voltage'])
 

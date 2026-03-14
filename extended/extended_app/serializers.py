@@ -55,3 +55,12 @@ class ESP32PayloadSerializer(serializers.Serializer):
 #       }
 #    ]
 # }'
+
+# ai classifier input example:
+# curl -X POST http://stavaris.com/api/classify/ \
+# -H "Content-Type: application/json" \
+# -d '{
+#    "voltage": [0.1, 0.2, ..., 0.5],  # 500 values
+#    "current": [0.01, 0.02, ..., 0.05],  # 500 values
+#    "source_hz": 250
+# }'

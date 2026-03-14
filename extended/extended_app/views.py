@@ -49,3 +49,15 @@ class ReceiveReadingsView(APIView):
          status=status.HTTP_201_CREATED
       )
    
+class ESP32DashboardView(APIView):
+   def get(self, request, esp32_id):
+      try:
+         esp32 = ESP32.objects.get(esp32_id=esp32_id)
+      except ESP32.DoesNotExist:
+         return Response(
+            {'error': 'ESP32 not found'},
+            status=status.HTTP_404_NOT_FOUND
+         )
+      
+      outlets = Outlet.objects.filter(esp32=esp32).prefetch_related('readings')
+      # TODO: add serialization and change the data that is supposed to be sent

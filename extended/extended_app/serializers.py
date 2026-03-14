@@ -5,7 +5,6 @@ class PowerReadingInputSerializer(serializers.Serializer):
    outlet_index = serializers.IntegerField()
    amperage = serializers.FloatField()
    voltage = serializers.FloatField()
-   # wattage = serializers.FloatField() # Should calculate in views
    timestamp_ms = serializers.IntegerField()
    button_state = serializers.BooleanField()
 

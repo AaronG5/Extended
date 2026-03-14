@@ -341,3 +341,114 @@ class ESP32LatestReadingsView(APIView):
          'esp32_id': esp32_id,
          'outlets': result,
       }, status=status.HTTP_200_OK)
+
+
+class OutletReadingsView(APIView):
+   PERIOD_HOURS = {
+      'hour': 1,
+      'day': 24,
+      'week': 24 * 7,
+   }
+
+   def get(self, request, esp32_id):
+      outlet_index_raw = request.query_params.get('outlet_index')
+      period = request.query_params.get('period', 'hour')
+
+      if outlet_index_raw is None:
+         return Response({'error': 'outlet_index is required'}, status=status.HTTP_400_BAD_REQUEST)
+      try:
+         outlet_index = int(outlet_index_raw)
+      except ValueError:
+         return Response({'error': 'outlet_index must be an integer'}, status=status.HTTP_400_BAD_REQUEST)
+
+      if period not in self.PERIOD_HOURS:
+         return Response(
+            {'error': f'period must be one of: {list(self.PERIOD_HOURS.keys())}'},
+            status=status.HTTP_400_BAD_REQUEST,
+         )
+
+      try:
+         outlet = Outlet.objects.get(esp32__esp32_id=esp32_id, outlet_index=outlet_index)
+      except Outlet.DoesNotExist:
+         return Response({'error': 'Outlet not found'}, status=status.HTTP_404_NOT_FOUND)
+
+      since = timezone.now() - timedelta(hours=self.PERIOD_HOURS[period])
+      readings = (
+         outlet.readings
+         .filter(recorded_at__gte=since)
+         .order_by('projected_timestamp', 'recorded_at')
+      )
+
+      return Response([
+         {
+            'timestamp': (r.projected_timestamp or r.recorded_at).isoformat(),
+            'wattage': r.wattage,
+         }
+         for r in readings
+      ], status=status.HTTP_200_OK)
+
+
+class EnergyBreakdownView(APIView):
+   PERIOD_HOURS = {
+      'day': 24,
+      'week': 24 * 7,
+      'month': 24 * 30,
+   }
+
+   def get(self, request, esp32_id):
+      period = request.query_params.get('period', 'day')
+      if period not in self.PERIOD_HOURS:
+         return Response(
+            {'error': f'period must be one of: {list(self.PERIOD_HOURS.keys())}'},
+            status=status.HTTP_400_BAD_REQUEST,
+         )
+
+      try:
+         esp32 = ESP32.objects.get(esp32_id=esp32_id)
+      except ESP32.DoesNotExist:
+         return Response({'error': 'ESP32 not found'}, status=status.HTTP_404_NOT_FOUND)
+
+      since = timezone.now() - timedelta(hours=self.PERIOD_HOURS[period])
+      entries = []
+
+      for outlet in Outlet.objects.filter(esp32=esp32).order_by('outlet_index'):
+         readings = list(
+            outlet.readings.filter(recorded_at__gte=since).order_by('projected_timestamp', 'recorded_at')
+         )
+         if len(readings) < 2:
+            continue
+
+         first = readings[0]
+         last = readings[-1]
+         t_start = first.projected_timestamp or first.recorded_at
+         t_end = last.projected_timestamp or last.recorded_at
+         total_hours = (t_end - t_start).total_seconds() / 3600
+         if total_hours <= 0:
+            continue
+
+         avg_wattage = sum(r.wattage for r in readings) / len(readings)
+         kwh = round(avg_wattage * total_hours / 1000, 6)
+
+         try:
+            device_type = outlet.device_type.device_type
+         except Device.DoesNotExist:
+            device_type = None
+
+         entries.append({'device_type': device_type, 'kwh': kwh})
+
+      totals_by_type = {}
+      for entry in entries:
+         key = entry['device_type']
+         totals_by_type[key] = totals_by_type.get(key, 0.0) + entry['kwh']
+
+      total_kwh = sum(totals_by_type.values())
+      response = []
+      for device_type, kwh in sorted(totals_by_type.items(), key=lambda item: item[1], reverse=True):
+         percentage = round((kwh / total_kwh) * 100, 1) if total_kwh > 0 else 0.0
+         response.append({
+            'device_type': device_type,
+            'kwh': round(kwh, 6),
+            'percentage': percentage,
+         })
+
+      return Response(response, status=status.HTTP_200_OK)

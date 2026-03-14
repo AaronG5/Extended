@@ -1,9 +1,10 @@
+from datetime import timedelta
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import ESP32, Outlet, Device, PowerReading
-from .serializers import ESP32PayloadSerializer, ESP32DashboardSerializer
+from .serializers import ESP32PayloadSerializer, ESP32DashboardSerializer, WattageReadingSerializer
 from .utils import normalize_current, normalize_voltage
 
 
@@ -53,6 +54,51 @@ class ReceiveReadingsView(APIView):
          {'message': f'{saved_readings} readings saved'},
          status=status.HTTP_201_CREATED
       )
+
+class OutletReadingsView(APIView):
+   PERIODS = {'hour': 1, 'day': 24, 'week': 168}
+
+   def get(self, request, esp32_id):
+      period = request.query_params.get('period', 'hour')
+      outlet_index = request.query_params.get('outlet_index')
+
+      if period not in self.PERIODS:
+         return Response(
+            {'error': f'period must be one of: {list(self.PERIODS)}'},
+            status=status.HTTP_400_BAD_REQUEST
+         )
+      if outlet_index is None:
+         return Response({'error': 'outlet_index is required'}, status=status.HTTP_400_BAD_REQUEST)
+      try:
+         outlet_index = int(outlet_index)
+      except ValueError:
+         return Response({'error': 'outlet_index must be an integer'}, status=status.HTTP_400_BAD_REQUEST)
+
+      try:
+         outlet = Outlet.objects.get(esp32__esp32_id=esp32_id, outlet_index=outlet_index)
+      except Outlet.DoesNotExist:
+         return Response({'error': 'Outlet not found'}, status=status.HTTP_404_NOT_FOUND)
+
+      since = timezone.now() - timedelta(hours=self.PERIODS[period])
+      readings = (
+         outlet.readings
+         .filter(recorded_at__gte=since)
+         .order_by('projected_timestamp', 'recorded_at')
+         .values('wattage', 'projected_timestamp', 'recorded_at')
+      )
+
+      data = [
+         {
+            'timestamp': r['projected_timestamp'] or r['recorded_at'],
+            'wattage': r['wattage'],
+         }
+         for r in readings
+      ]
+
+      serializer = WattageReadingSerializer(data=data, many=True)
+      serializer.is_valid(raise_exception=True)
+      return Response(serializer.data)
+
 
 class ListESP32View(APIView):
    def get(self, request):

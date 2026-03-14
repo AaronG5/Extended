@@ -32,6 +32,11 @@ class ESP32DashboardSerializer(serializers.Serializer):
    esp32_id = serializers.CharField()
    outlets = OutletDashboardSerializer(many=True)
 
+
+class WattageReadingSerializer(serializers.Serializer):
+   timestamp = serializers.DateTimeField()
+   wattage = serializers.FloatField()
+
 # JSON EXAMPLE:
 # {
 #    "id": "ABC123",

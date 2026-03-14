@@ -282,73 +282,59 @@ class ListESP32View(APIView):
       return Response({'devices': devices, 'returned': len(devices)}, status=status.HTTP_200_OK)
 
 class ESP32DashboardView(APIView):
-   def get(self, request, esp32_id):
-      predict_missing = request.query_params.get('predict_missing', '').lower() in ('1', 'true', 'yes')
+    def get(self, request, esp32_id):
+        predict_missing = request.query_params.get('predict_missing', '').lower() in ('1', 'true', 'yes')
 
-      try:
-         esp32 = ESP32.objects.get(esp32_id=esp32_id)
-      except ESP32.DoesNotExist:
-         return Response(
-            {'error': 'ESP32 not found'},
-            status=status.HTTP_404_NOT_FOUND
-         )
+        try:
+            esp32 = ESP32.objects.get(esp32_id=esp32_id)
+        except ESP32.DoesNotExist:
+            return Response(
+                {'error': 'ESP32 not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
-      outlets = Outlet.objects.filter(esp32=esp32).order_by('outlet_index').prefetch_related('readings')
-      now = timezone.now()
-      all_anomalies = []
-      outlet_data = []
+        outlets = Outlet.objects.filter(esp32=esp32).order_by('outlet_index')
+        now = timezone.now()
+        all_anomalies = []
+        outlet_data = []
 
-      for outlet in outlets:
-         readings = outlet.readings.filter(
-            projected_timestamp__gte=now - timedelta(minutes=1)
-         )
+        for outlet in outlets:
+            latest = outlet.readings.order_by('-projected_timestamp', '-recorded_at').first()
 
-         # Run periodic checks across the last 1 minutes of readings
-         # anomalies = run_periodic_checks(outlet, readings)
-         # for anomaly in anomalies:
-         #    all_anomalies.append({
-         #       'outlet': outlet.outlet_index,
-         #       'timestamp': now.isoformat(),
-         #       **anomaly
-         #    })
+            last_400 = outlet.readings.order_by('-projected_timestamp', '-recorded_at')[:400]
+            stats = last_400.aggregate(avg_wattage=Avg('wattage'))
+            avg_wattage = stats['avg_wattage'] or 0.0
 
-         readings_desc = list(
-            outlet.readings.order_by('-projected_timestamp', '-recorded_at')[:400]
-         )
-         readings = list(reversed(readings_desc))
-         latest = readings_desc[0] if readings_desc else None
+            kwh_recorded = 0.0
+            if latest:
+                oldest_of_400 = last_400.last()
+                if oldest_of_400:
+                    t_start = oldest_of_400.projected_timestamp or oldest_of_400.recorded_at
+                    t_end = latest.projected_timestamp or latest.recorded_at
+                    total_hours = (t_end - t_start).total_seconds() / 3600
+                    if total_hours > 0:
+                        kwh_recorded = round(avg_wattage * total_hours / 1000, 6)
 
-         kwh_recorded = 0.0
-         if len(readings) > 1:
-            first = readings[0]
-            last = readings[-1]
-            t_start = first.projected_timestamp or first.recorded_at
-            t_end = last.projected_timestamp or last.recorded_at
-            total_hours = (t_end - t_start).total_seconds() / 3600
-            if total_hours > 0:
-               avg_wattage = sum(abs_wattage(r.voltage, r.amperage) for r in readings) / len(readings)
-               kwh_recorded = round(avg_wattage * total_hours / 1000, 6)
+            if predict_missing:
+                device_type = get_or_predict_device_type(outlet)
+            else:
+                device_type = get_saved_device_type(outlet)
 
-         if predict_missing:
-            device_type = get_or_predict_device_type(outlet)
-         else:
-            device_type = get_saved_device_type(outlet)
+            outlet_data.append({
+                'outlet_index': outlet.outlet_index,
+                'device_type': device_type,
+                'button_state': latest.button_state if latest else None,
+                'wattage': abs_wattage(latest.voltage, latest.amperage) if latest else None,
+                'kwh_recorded': kwh_recorded,
+            })
 
-         outlet_data.append({
-            'outlet_index': outlet.outlet_index,
-            'device_type': device_type,
-            'button_state': latest.button_state if latest else None,
-            'wattage': abs_wattage(latest.voltage, latest.amperage) if latest else None,
-            'kwh_recorded': kwh_recorded,
-         })
-
-      return Response({
-         'esp32_id': esp32_id,
-         'timestamp': now.isoformat(),
-         'predict_missing': predict_missing,
-         'outlets': outlet_data,
-         'anomalies': all_anomalies,
-      }, status=status.HTTP_200_OK)
+        return Response({
+            'esp32_id': esp32_id,
+            'timestamp': now.isoformat(),
+            'predict_missing': predict_missing,
+            'outlets': outlet_data,
+            'anomalies': all_anomalies,
+        }, status=status.HTTP_200_OK)
    
 
 class ESP32LatestReadingsView(APIView):

@@ -123,7 +123,7 @@ def build_features_from_waveforms(
 ) -> dict[str, float]:
     voltage, current = downsample(voltage, current, goal_hz=goal_hz, source_hz=source_hz)
     cycles_v, cycles_i = extract_cycles(voltage, current)
-    if len(cycles_v) < 56:
+    if len(cycles_v) < 10:
         raise HTTPException(
             status_code=422,
             detail="Not enough cycles after preprocessing. Need at least 56 positive-going cycles.",

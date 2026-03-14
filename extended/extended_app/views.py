@@ -13,7 +13,7 @@ from .serializers import (
    ClassifierInputSerializer,
    ClassifierLatestRequestSerializer,
 )
-from .utils import normalize_voltage, normalize_current
+from .utils import normalize_voltage, normalize_current, abs_wattage
 from .anomaly_detection import run_per_reading_checks, run_periodic_checks
 
 
@@ -256,7 +256,7 @@ class ESP32DashboardView(APIView):
             t_end = last.projected_timestamp or last.recorded_at
             total_hours = (t_end - t_start).total_seconds() / 3600
             if total_hours > 0:
-               avg_wattage = sum(r.wattage for r in readings) / len(readings)
+               avg_wattage = sum(abs_wattage(r.voltage, r.amperage) for r in readings) / len(readings)
                kwh_recorded = round(avg_wattage * total_hours / 1000, 6)
 
          try:
@@ -268,7 +268,7 @@ class ESP32DashboardView(APIView):
             'outlet_index': outlet.outlet_index,
             'device_type': device_type,
             'button_state': latest.button_state if latest else None,
-            'wattage': latest.wattage if latest else None,
+            'wattage': abs_wattage(latest.voltage, latest.amperage) if latest else None,
             'kwh_recorded': kwh_recorded,
          })
 
@@ -308,7 +308,7 @@ class ESP32LatestReadingsView(APIView):
             t_end = last.projected_timestamp or last.recorded_at
             total_hours = (t_end - t_start).total_seconds() / 3600
             if total_hours > 0:
-               avg_wattage = sum(r.wattage for r in readings) / len(readings)
+               avg_wattage = sum(abs_wattage(r.voltage, r.amperage) for r in readings) / len(readings)
                kwh_recorded = round(avg_wattage * total_hours / 1000, 6)
 
          try:
@@ -320,7 +320,7 @@ class ESP32LatestReadingsView(APIView):
             'outlet_index': outlet.outlet_index,
             'device_type': device_type,
             'button_state': latest.button_state if latest else None,
-            'wattage': latest.wattage if latest else None,
+            'wattage': abs_wattage(latest.voltage, latest.amperage) if latest else None,
             'kwh_recorded': kwh_recorded,
             'readings': [
                {
@@ -328,7 +328,7 @@ class ESP32LatestReadingsView(APIView):
                   'min_voltage': r.min_voltage,
                   'max_voltage': r.max_voltage,
                   'amperage': r.amperage,
-                  'wattage': r.wattage,
+                  'wattage': abs_wattage(r.voltage, r.amperage),
                   'button_state': r.button_state,
                   'timestamp_ms': r.timestamp_ms,
                   'projected_timestamp': r.projected_timestamp,
@@ -382,7 +382,7 @@ class OutletReadingsView(APIView):
       return Response([
          {
             'timestamp': (r.projected_timestamp or r.recorded_at).isoformat(),
-            'wattage': r.wattage,
+            'wattage': abs_wattage(r.voltage, r.amperage),
          }
          for r in readings
       ], status=status.HTTP_200_OK)
@@ -426,7 +426,7 @@ class EnergyBreakdownView(APIView):
          if total_hours <= 0:
             continue
 
-         avg_wattage = sum(r.wattage for r in readings) / len(readings)
+         avg_wattage = sum(abs_wattage(r.voltage, r.amperage) for r in readings) / len(readings)
          kwh = round(avg_wattage * total_hours / 1000, 6)
 
          try:

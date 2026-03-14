@@ -1,7 +1,7 @@
 import json
 import os
 from urllib import error, request as urllib_request
-
+from django.db.models import Avg
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework.views import APIView

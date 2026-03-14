@@ -16,38 +16,27 @@ class ReadingInputSerializer(serializers.Serializer):
 
 class ESP32PayloadSerializer(serializers.Serializer):
    id = serializers.CharField()
+   min_voltage = serializers.IntegerField(min_value=0, max_value=4096)
+   max_voltage = serializers.IntegerField(min_value=0, max_value=4096)
    readings = ReadingInputSerializer(many=True)
 
 # JSON EXAMPLE:
-# {
-#    "id": "ABC123",
-#    "voltage": 5,
-#    "timestamp_ms": 12345,
-#    "readings": [
-#    {
-#       "current_1": 10,
-#       "current_2": 11,
-#       "current_3": 12,
-#       "current_4": 13,
-#       "button_1": False,
-#       "button_2": False,
-#       "button_3": True,
-#       "button_4": True
-#    }]
-# }
-
+   # "Content-Type: application/json" 
+   # {
 # curl -X POST http://stavaris.com/api/readings/ \
 # -H "Content-Type: application/json" \
 # -d '{
-#    "id": "ABC123",
-#    "readings": [
+#       "id": "ABC123",
+#       "max_voltage": 120,
+#       "min_voltage": 110,
+#       "readings": [
 #       {
-#          "voltage": 5.2,
+#          "voltage": 5,
 #          "timestamp_ms": 12345,
-#          "current_1": 10.1,
-#          "current_2": 11.1,
-#          "current_3": 12.1,
-#          "current_4": 13.1,
+#          "current_1": 10,
+#          "current_2": 11,
+#          "current_3": 12,
+#          "current_4": 13,
 #          "button_1": false,
 #          "button_2": false,
 #          "button_3": true,

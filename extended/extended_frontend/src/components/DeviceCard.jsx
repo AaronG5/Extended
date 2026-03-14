@@ -3,8 +3,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
 
-const PERIODS      = ['day', 'week', 'month'];
-const GRANULARITIES = ['hour', 'day', 'week'];
+const PERIODS      = ['diena', 'savaitė', 'mėnesis'];
+const GRANULARITIES = ['valanda', 'diena', 'savaitė'];
 
 function PeriodToggle({ value, options, onChange }) {
   return (
@@ -58,8 +58,11 @@ function DeviceCard({ device, fetchHistory }) {
   const [isEditing, setIsEditing]       = useState(false);
   const [editValue, setEditValue]       = useState(device.name);
 
-  const kwhHours = kwhPeriod === 'day' ? 24 : kwhPeriod === 'week' ? 168 : 720;
-  const kwh = (device.currentPowerDraw * kwhHours / 1000).toFixed(2);
+  // Use measured kWh from API when available, otherwise estimate from wattage
+  const kwh = device.kwhRecorded != null
+    ? device.kwhRecorded.toFixed(4)
+    : ((device.currentPowerDraw * (kwhPeriod === 'day' ? 24 : kwhPeriod === 'week' ? 168 : 720)) / 1000).toFixed(2);
+  const kwhLabel = device.kwhRecorded != null ? 'kWh total' : 'kWh';
 
   function handleConfirm() {
     const trimmed = editValue.trim() || deviceName;
@@ -176,7 +179,7 @@ function DeviceCard({ device, fetchHistory }) {
               <span className="text-2xl font-bold text-extended-black leading-none">
                 {pluggedIn ? kwh : '—'}
               </span>
-              <span className="text-xs text-gray-400 mt-1">kWh</span>
+              <span className="text-xs text-gray-400 mt-1">{kwhLabel}</span>
             </div>
 
             {/* Row 1, Col 3 — status */}
@@ -205,7 +208,7 @@ function DeviceCard({ device, fetchHistory }) {
               onClick={() => setIsFlipped(true)}
               className="bg-extended-black text-white text-sm px-6 py-1.5 rounded-full hover:opacity-80 transition-opacity"
             >
-              Graph ▶
+              Grafikas ▶
             </button>
           </div>
         </div>
@@ -226,7 +229,7 @@ function DeviceCard({ device, fetchHistory }) {
               onClick={() => setIsFlipped(false)}
               className="text-extended-black text-sm font-medium hover:opacity-70"
             >
-              ← Back
+              ← Atgal
             </button>
             <span className="text-sm font-semibold text-extended-black">{deviceName}</span>
             <PeriodToggle value={granularity} options={GRANULARITIES} onChange={setGranularity} />

@@ -11,7 +11,7 @@ from .anomaly_detection import run_per_reading_checks, run_periodic_checks
 
 class ReceiveReadingsView(APIView):
    def post(self, request):
-      print(request.data)
+      # print(request.data)
       serializer = ESP32PayloadSerializer(data=request.data)
 
       if not serializer.is_valid():
@@ -28,11 +28,11 @@ class ReceiveReadingsView(APIView):
       saved_readings = 0
       all_anomalies = []
 
+      min_voltage = normalize_voltage(data['min_voltage'])
+      max_voltage = normalize_voltage(data['max_voltage'])
       anchor_timestamp_ms = reading['timestamp_ms']
       for reading in data['readings']:
          voltage = normalize_voltage(reading['voltage'])
-         min_voltage = normalize_voltage(reading['min_voltage'])
-         max_voltage = normalize_voltage(reading['max_voltage'])
 
          for outlet_index in range(4):
             raw_current = reading[f'current_{outlet_index + 1}']
